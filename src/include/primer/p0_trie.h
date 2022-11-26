@@ -19,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/logger.h"
 #include "common/exception.h"
 #include "common/rwlatch.h"
 
@@ -37,8 +38,8 @@ class TrieNode {
    *
    * @param key_char Key character of this trie node
    */
-  explicit TrieNode(char key_char) {}
-
+  explicit TrieNode(char key_char) : key_char_(key_char), is_end_(false) {}
+  // This constructor function has not assign value to the map, it will 自动生成
   /**
    * TODO(P0): Add implementation
    *
@@ -47,12 +48,16 @@ class TrieNode {
    *
    * @param other_trie_node Old trie node.
    */
-  TrieNode(TrieNode &&other_trie_node) noexcept {}
+  TrieNode(TrieNode &&other_trie_node) noexcept {
+    this->is_end_ = other_trie_node.is_end_;
+    this->key_char_ = other_trie_node.key_char_;
+    this->children_ = std::move(other_trie_node.children_);
+  }
 
   /**
    * @brief Destroy the TrieNode object.
    */
-  virtual ~TrieNode() = default;
+  virtual ~TrieNode() = default;        // 不需要实现，因为都是 unique_ptr
 
   /**
    * TODO(P0): Add implementation
@@ -62,7 +67,7 @@ class TrieNode {
    * @param key_char Key char of child node.
    * @return True if this trie node has a child with given key, false otherwise.
    */
-  bool HasChild(char key_char) const { return false; }
+  bool HasChild(char key_char) const { return children_.count(key_char) != 0; }
 
   /**
    * TODO(P0): Add implementation
@@ -72,7 +77,7 @@ class TrieNode {
    *
    * @return True if this trie node has any child node, false if it has no child node.
    */
-  bool HasChildren() const { return false; }
+  bool HasChildren() const { return children_.size() != 0; }
 
   /**
    * TODO(P0): Add implementation
@@ -81,7 +86,7 @@ class TrieNode {
    *
    * @return True if is_end_ flag is true, false if is_end_ is false.
    */
-  bool IsEndNode() const { return false; }
+  bool IsEndNode() const { return is_end_; }
 
   /**
    * TODO(P0): Add implementation
@@ -90,7 +95,7 @@ class TrieNode {
    *
    * @return key_char_ of this trie node.
    */
-  char GetKeyChar() const { return 'a'; }
+  char GetKeyChar() const { return key_char_; }
 
   /**
    * TODO(P0): Add implementation
@@ -111,7 +116,14 @@ class TrieNode {
    * @param child Unique pointer created for the child node. This should be added to children_ map.
    * @return Pointer to unique_ptr of the inserted child node. If insertion fails, return nullptr.
    */
-  std::unique_ptr<TrieNode> *InsertChildNode(char key_char, std::unique_ptr<TrieNode> &&child) { return nullptr; }
+  std::unique_ptr<TrieNode> *InsertChildNode(char key_char, std::unique_ptr<TrieNode> &&child) {
+    if (children_.count(key_char)) return nullptr;          // There already has key in children
+    if (key_char != child->GetKeyChar()) return nullptr;
+    // 注意传进来的 child 是 rvalue, 赋值使用 std::move()
+    children_[key_char] = std::move(child);
+    // Return value is a pointer to unique_ptr ==> 能够不获得 所有权 的情况下得到 内部的 value
+    return &children_[key_char];
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -123,7 +135,10 @@ class TrieNode {
    * @return Pointer to unique_ptr of the child node, nullptr if child
    *         node does not exist.
    */
-  std::unique_ptr<TrieNode> *GetChildNode(char key_char) { return nullptr; }
+  std::unique_ptr<TrieNode> *GetChildNode(char key_char) {
+      if (children_.count(key_char) == 0) return nullptr;
+      return &children_[key_char];
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -133,7 +148,15 @@ class TrieNode {
    *
    * @param key_char Key char of child node to be removed
    */
-  void RemoveChildNode(char key_char) {}
+  void RemoveChildNode(char key_char) {
+    if (children_.count(key_char) == 0) return;
+    children_.erase(key_char);      // Erase element by Value
+  }
+
+  bool IfHasChildren() {
+    return children_.size() != 0;
+  }
+
 
   /**
    * TODO(P0): Add implementation
@@ -142,7 +165,7 @@ class TrieNode {
    *
    * @param is_end Whether this trie node is ending char of a key string
    */
-  void SetEndNode(bool is_end) {}
+  void SetEndNode(bool is_end) { is_end_ = is_end; }
 
  protected:
   /** Key character of this trie node */
@@ -161,7 +184,7 @@ class TrieNode {
 template <typename T>
 class TrieNodeWithValue : public TrieNode {
  private:
-  /* Value held by this trie node. */
+  /* Value held by this trie node. */     // 增加了一个 Value 的属性
   T value_;
 
  public:
@@ -171,7 +194,7 @@ class TrieNodeWithValue : public TrieNode {
    * @brief Construct a new TrieNodeWithValue object from a TrieNode object and specify its value.
    * This is used when a non-terminal TrieNode is converted to terminal TrieNodeWithValue.
    *
-   * The children_ map of TrieNode should be moved to the new TrieNodeWithValue object.
+   * The children_ map of TrieNode should be moved to the new TrieNodeWithValue object.         // 1. 转移 map 到新的 object
    * Since it contains unique pointers, the first parameter is a rvalue reference.
    *
    * You should:
@@ -183,12 +206,14 @@ class TrieNodeWithValue : public TrieNode {
    * @param trieNode TrieNode whose data is to be moved to TrieNodeWithValue
    * @param value
    */
-  TrieNodeWithValue(TrieNode &&trieNode, T value) {}
+
+  // 这个带 value 的 node 就代表string到达了结尾处了, 所以说 endvalue 一直都是 true
+  TrieNodeWithValue(TrieNode &&trieNode, T value) : TrieNode(std::move(trieNode)), value_(value) { SetEndNode(true);}
 
   /**
    * TODO(P0): Add implementation
    *
-   * @brief Construct a new TrieNodeWithValue. This is used when a new terminal node is constructed.
+   * @brief Construct a new TrieNodeWithValue. This is used when a new terminal node is constructed. // 构建一个terminal节点的时候会用到
    *
    * You should:
    * 1) Invoke the constructor for TrieNode with the given key_char.
@@ -198,7 +223,9 @@ class TrieNodeWithValue : public TrieNode {
    * @param key_char Key char of this node
    * @param value Value of this node
    */
-  TrieNodeWithValue(char key_char, T value) {}
+
+  // Create from scratch, from scratch, first construct the base class [TrieNode], then set some private attribute arguments
+  TrieNodeWithValue(char key_char, T value) : TrieNode(key_char), value_(value) { SetEndNode(true); }
 
   /**
    * @brief Destroy the Trie Node With Value object
@@ -210,7 +237,9 @@ class TrieNodeWithValue : public TrieNode {
    *
    * @return Value of type T stored in this node
    */
-  T GetValue() const { return value_; }
+  T GetValue() const {
+    LOG_DEBUG("call function, getvalue()");
+    return value_; }
 };
 
 /**
@@ -231,7 +260,7 @@ class Trie {
    * @brief Construct a new Trie object. Initialize the root node with '\0'
    * character.
    */
-  Trie() = default;
+  Trie() : root_(std::make_unique<TrieNode>('0')) {}
 
   /**
    * TODO(P0): Add implementation
@@ -246,7 +275,7 @@ class Trie {
    * When you reach the ending character of a key:
    * 1. If TrieNode with this ending character does not exist, create new TrieNodeWithValue
    * and add it to parent node's children_ map.
-   * 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by
+   * 2. If the terminal node is a TrieNode, then convert it into TrieNodeWithValue by           需要删除掉原来的 TrieNode & 创建新的 TrieNodeWithValue
    * invoking the appropriate constructor.
    * 3. If it is already a TrieNodeWithValue,
    * then insertion fails and returns false. Do not overwrite existing data with new data.
@@ -261,7 +290,35 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
-    return false;
+    // 如果说插入的节点是重复的，直接返回 false; 怎么判断是重复的呢？ Is_end is true to judge is duplicated
+    if (key.size() == 0) return false;
+    auto node = &root_;
+    int n = key.size();
+    for (int i = 0; i < n-1; i++) {
+      char ch = key[i];
+      if (!(*node)->HasChild(ch)) {
+        (*node)->InsertChildNode(ch, std::make_unique<TrieNode>(ch));
+      }
+      node = (*node)->GetChildNode(ch);       // node指针的移动
+    }
+//    LOG_INFO("目前已经遍历完TrieNode对应的string了");
+    char final_char = key.back();
+    // 1. 不存在末尾的节点，直接插入 TrieNodeWithValue
+    if (node->get()->HasChild(final_char) == false) {       // 最后一个节点是不存在的， 直接创建然后 Return True 就好了
+      LOG_INFO("如果说最后一个节点是没有在 Trienode 中的，直接插入 Trienodewithvalue");
+      std::unique_ptr<TrieNodeWithValue<T>> newnode = std::make_unique<TrieNodeWithValue<T>>(final_char, value);
+      node->get()->InsertChildNode(final_char, std::move(newnode));
+      return true;
+    }
+
+    node = (*node)->GetChildNode(final_char);
+
+    // 2. 如果说是一个 TrieNodeWithValue, 那么就是重复插入数据，直接返回 false
+    if ((*node)->IsEndNode()) return false;
+
+    // 3. 如果说是一个 TrieNode, 那么直接提升为 TrieNodeWithValue
+    *node = std::make_unique<TrieNodeWithValue<T>>(std::move(*(*node)), value);
+    return true;
   }
 
   /**
@@ -281,7 +338,33 @@ class Trie {
    * @param key Key used to traverse the trie and find the correct node
    * @return True if the key exists and is removed, false otherwise
    */
-  bool Remove(const std::string &key) { return false; }
+
+  bool Remove(const std::string &key) {
+    if (key.size() == 0) return false;
+    std::vector<std::unique_ptr<TrieNode>*> vec;     // To store the parent node
+    auto node = &root_;
+    for (const char& ch : key) {
+      if (!node->get()->HasChild(ch)) return false;       // 如果说压根就没有包含 给定的 key, 直接 Return false
+      vec.emplace_back(node);
+      node = (*node)->GetChildNode(ch);
+    }
+    if ((*node)->HasChildren()) return false;             // 仍然是有children, 不能够进行删除
+    // 终端节点， 可以进行递归的删除节点了
+    RemoveNode(key, key.size()-1, vec, node);
+    return true;
+  }
+
+  // Recursion 的条件 : 没有子节点 & 不是 NodeWithValue 的终端节点
+  void RemoveNode(const std::string& key, size_t curIndex, std::vector<std::unique_ptr<TrieNode>*>& vec, std::unique_ptr<TrieNode>* cur) {
+    std::unique_ptr<TrieNode>* curnode = std::move(vec.back()); vec.pop_back();
+    if ((*curnode)->HasChildren() && !(*curnode)->IsEndNode()) {
+      (*vec.back())->RemoveChildNode((*curnode)->GetKeyChar());           // 从父节点中进行删除
+    } else {
+      // 已经是不能够删除了
+      return;
+    }
+  }
+
 
   /**
    * TODO(P0): Add implementation
@@ -302,9 +385,20 @@ class Trie {
    * @return Value of type T if type matches
    */
   template <typename T>
-  T GetValue(const std::string &key, bool *success) {
-    *success = false;
-    return {};
+  T GetValue(const std::string &key, bool *success) {     // get value,
+    if (key.size() == 0) {
+      *success = false;
+      return T{};
+    }
+    // 需要进行树的遍历，找到最终的 terminal node & judge the type if is equal
+    auto node = &root_;
+    for (const char& it : key) {
+      if ((*node)->HasChild(it)) node = (*node)->GetChildNode(it);
+      else { *success = false; return T{};}
+    }
+    *success = true;
+    // 最后到达了 node with value [c]
+    return dynamic_cast<TrieNodeWithValue<T> *>(&(*(*node)))->GetValue();
   }
 };
 }  // namespace bustub

@@ -40,7 +40,7 @@ std::vector<std::string> GenerateNRandomString(int n) {
 
   return rand_strs;
 }
-
+//TEST(StarterTest, TrieNodeInsertTest){
 TEST(StarterTest, DISABLED_TrieNodeInsertTest) {
   // Test Insert
   //  When same key is inserted twice, insert should return nullptr
@@ -78,14 +78,16 @@ TEST(StarterTest, DISABLED_TrieNodeRemoveTest) {
   EXPECT_EQ(child_node, nullptr);
 }
 
-TEST(StarterTest, DISABLED_TrieInsertTest) {
+// Trie Insert
+TEST(StarterTest, TrieInsertTest) {
   {
     Trie trie;
-    trie.Insert<std::string>("abc", "d");
+    trie.Insert<std::string>("abc", "d");         // 1. insert string,
     bool success = true;
     auto val = trie.GetValue<std::string>("abc", &success);
     EXPECT_EQ(success, true);
     EXPECT_EQ(val, "d");
+    LOG_DEBUG("test one end...");
   }
 
   // Insert empty string key should return false
@@ -107,8 +109,9 @@ TEST(StarterTest, DISABLED_TrieInsertTest) {
     EXPECT_EQ(success, false);
 
     auto val = trie.GetValue<int>("abc", &success);
-    EXPECT_EQ(success, true);
+    EXPECT_EQ(success, true);                           // here is wrong,
     EXPECT_EQ(val, 5);
+    LOG_DEBUG("test three end...");
   }
 
   // Insert different data types

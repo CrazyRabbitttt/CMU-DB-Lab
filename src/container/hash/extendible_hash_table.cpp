@@ -21,6 +21,7 @@
 
 namespace bustub {
 
+// 对应的 哈希函数 的实现
 template <typename K, typename V>
 ExtendibleHashTable<K, V>::ExtendibleHashTable(size_t bucket_size)
     : global_depth_(0), bucket_size_(bucket_size), num_buckets_(1) {}
