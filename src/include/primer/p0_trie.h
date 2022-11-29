@@ -238,7 +238,6 @@ class TrieNodeWithValue : public TrieNode {
    * @return Value of type T stored in this node
    */
   T GetValue() const {
-    LOG_DEBUG("call function, getvalue()");
     return value_; }
 };
 
@@ -252,6 +251,7 @@ class Trie {
   std::unique_ptr<TrieNode> root_;
   /* Read-write lock for the trie */
   ReaderWriterLatch latch_;
+  std::mutex mutex_;
 
  public:
   /**
@@ -260,7 +260,7 @@ class Trie {
    * @brief Construct a new Trie object. Initialize the root node with '\0'
    * character.
    */
-  Trie() : root_(std::make_unique<TrieNode>('0')) {}
+  Trie() : root_(std::make_unique<TrieNode>('\0')) {}
 
   /**
    * TODO(P0): Add implementation
@@ -290,6 +290,7 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
+    std::scoped_lock<std::mutex> lock(mutex_);
     // 如果说插入的节点是重复的，直接返回 false; 怎么判断是重复的呢？ Is_end is true to judge is duplicated
     if (key.size() == 0) return false;
     auto node = &root_;
@@ -305,7 +306,6 @@ class Trie {
     char final_char = key.back();
     // 1. 不存在末尾的节点，直接插入 TrieNodeWithValue
     if (node->get()->HasChild(final_char) == false) {       // 最后一个节点是不存在的， 直接创建然后 Return True 就好了
-      LOG_INFO("如果说最后一个节点是没有在 Trienode 中的，直接插入 Trienodewithvalue");
       std::unique_ptr<TrieNodeWithValue<T>> newnode = std::make_unique<TrieNodeWithValue<T>>(final_char, value);
       node->get()->InsertChildNode(final_char, std::move(newnode));
       return true;
@@ -333,38 +333,60 @@ class Trie {
    * 2) If this terminal node does not have any children, remove it from its
    * parent's children_ map.
    * 3) Recursively remove nodes that have no children and are not terminal node
-   * of another key.
+   * of another key.                // not terminal node of any key && does not have children
    *
    * @param key Key used to traverse the trie and find the correct node
    * @return True if the key exists and is removed, false otherwise
    */
 
   bool Remove(const std::string &key) {
+    std::scoped_lock<std::mutex> lock(mutex_);
     if (key.size() == 0) return false;
     std::vector<std::unique_ptr<TrieNode>*> vec;     // To store the parent node
     auto node = &root_;
-    for (const char& ch : key) {
-      if (!node->get()->HasChild(ch)) return false;       // 如果说压根就没有包含 给定的 key, 直接 Return false
-      vec.emplace_back(node);
+    for (const char& ch : key) {    // root -> a -> a -> a
+      if (!(*node)->HasChild(ch)) return false;       // 如果说压根就没有包含 给定的 key, 直接 Return false
       node = (*node)->GetChildNode(ch);
+      vec.emplace_back(node);
     }
-    if ((*node)->HasChildren()) return false;             // 仍然是有children, 不能够进行删除
-    // 终端节点， 可以进行递归的删除节点了
-    RemoveNode(key, key.size()-1, vec, node);
+    // vector : [root, a, a, ]
+    if ((*node)->HasChildren()) {
+      (*node)->SetEndNode(false);                     // 将 endnode 的标识取消掉
+      return true;                                    // 仍然是有children, 直接取消掉 end_node, return true
+    }
+    // 终端节点， 可以进行递归的删除节点了, 将终端节点的isend设置为false用于删除
+    (*node)->SetEndNode(false);
+    RemoveNode(key, key.size()-1, vec);
     return true;
   }
 
   // Recursion 的条件 : 没有子节点 & 不是 NodeWithValue 的终端节点
-  void RemoveNode(const std::string& key, size_t curIndex, std::vector<std::unique_ptr<TrieNode>*>& vec, std::unique_ptr<TrieNode>* cur) {
-    std::unique_ptr<TrieNode>* curnode = std::move(vec.back()); vec.pop_back();
-    if ((*curnode)->HasChildren() && !(*curnode)->IsEndNode()) {
+  void RemoveNode(const std::string& key, size_t curIndex, std::vector<std::unique_ptr<TrieNode>*>& vec) {
+    std::unique_ptr<TrieNode>* curnode = vec.back(); vec.pop_back();     // unique_ptr* 的元素
+    if (!(*curnode)->HasChildren() && !(*curnode)->IsEndNode()) {
+      if (vec.size() == 0) {
+        root_->RemoveChildNode((*curnode)->GetKeyChar());
+        return;
+      }
       (*vec.back())->RemoveChildNode((*curnode)->GetKeyChar());           // 从父节点中进行删除
+      RemoveNode(key, curIndex-1, vec);
     } else {
       // 已经是不能够删除了
       return;
     }
   }
-
+//
+//  void ShowTreeNodes() {
+//    auto node = &root_;
+//    std::string str = "";
+//    LOG_DEBUG("==================v============= Begin Debug =======================================");
+//    while ((*node)->HasChildren()) {
+//      if ((*node)->HasChild('a')) { LOG_INFO("Has child node 'a'"); str += "a"; }
+//      node = (*node)->GetChildNode('a');
+//      if ((*node)->IsEndNode()) LOG_INFO("本字符是一个单词的结尾:%s", str.c_str());
+//    }
+//    LOG_DEBUG("================================ End Debug =========================================");
+//  }
 
   /**
    * TODO(P0): Add implementation
@@ -386,6 +408,7 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {     // get value,
+    std::scoped_lock<std::mutex> lock(mutex_);
     if (key.size() == 0) {
       *success = false;
       return T{};

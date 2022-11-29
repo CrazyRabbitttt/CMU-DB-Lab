@@ -17,7 +17,7 @@
 #include <unordered_map>
 
 #include "buffer/buffer_pool_manager.h"
-#include "buffer/lru_k_replacer.h"
+#include "buffer/lru_k_replacer.h"          // use the lru-k
 #include "common/config.h"
 #include "container/hash/extendible_hash_table.h"
 #include "recovery/log_manager.h"
