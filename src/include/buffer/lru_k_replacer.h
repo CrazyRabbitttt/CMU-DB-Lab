@@ -16,11 +16,16 @@
 #include <list>
 #include <mutex>  // NOLINT
 #include <unordered_map>
+#include <utility>
 #include <vector>
+#include <algorithm>
 
 #include "common/config.h"
-#include "common/macros.h"
 #include "common/logger.h"
+#include "common/macros.h"
+
+
+#define THROWERROR(message) throw std::logic_error(message)
 
 namespace bustub {
 
@@ -77,7 +82,8 @@ class LRUKReplacer {
    * TODO(P1): Add implementation
    *
    * @brief Record the event that the given frame id is accessed at current timestamp.
-   * Create a new entry for access history if frame id has not been seen before.                // 1. 没有访问过就创建一个新的
+   * Create a new entry for access history if frame id has not been seen before.                // 1.
+   * 没有访问过就创建一个新的
    *
    * If frame id is invalid (ie. larger than replacer_size_), throw an exception. You can
    * also use BUSTUB_ASSERT to abort the process if frame id is invalid.
@@ -96,7 +102,8 @@ class LRUKReplacer {
    * decrement. If a frame was previously non-evictable and is to be set to evictable,
    * then size should increment.
    *
-   * If frame id is invalid, throw an exception or abort the process.     // $$$$$$$$$$$$$$$$ if frame id is invalid, throw an exception Or abort the process $$$$$$$$$
+   * If frame id is invalid, throw an exception or abort the process.     // $$$$$$$$$$$$$$$$ if frame id is invalid,
+   * throw an exception Or abort the process $$$$$$$$$
    *
    * For other scenarios, this function should terminate without modifying anything.
    *
@@ -131,16 +138,8 @@ class LRUKReplacer {
    *
    * @return size_t
    */
-   // 返回 【能够驱逐的数据大小】
+  // 返回 【能够驱逐的数据大小】
   auto Size() -> size_t;
-
-  auto ShowHistoryList() -> void {
-    std::for_each(history_linked_list_.begin(), history_linked_list_.end(), [&](const entry& it) { LOG_INFO("The key in list:%d, evictable:%d", it.first, it.second); });
-    for (auto& it : counter_) {
-      LOG_DEBUG("In counter, key:%d, count:%d", it.first, it.second);
-    }
-  }
-
 
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
@@ -149,20 +148,20 @@ class LRUKReplacer {
   void IncrementEvictaleSize();
   void DecrementEvictableSize();
 
-  using entry = std::pair<int, bool>;           // the entry is [key & flag]
+  using entry = std::pair<int, bool>;  // the entry is [key & flag]
   using iterr = std::list<entry>::iterator;
 
   [[maybe_unused]] size_t current_timestamp_{0};
   [[maybe_unused]] size_t curr_size_{0};
   std::unordered_map<int, iterr> cache_mp_;
-  std::unordered_map<int, iterr> history_map_;       // key ====> iterator of list
-  std::unordered_map<int, int> counter_;            // key ====> accessed count
+  std::unordered_map<int, iterr> history_map_;  // key ====> iterator of list
+  std::unordered_map<int, int> counter_;        // key ====> accessed count
   std::list<entry> history_linked_list_;
   std::list<entry> cache_list_;
 
   // if access the key and the flag bit is not false, then evitable size + 1
   size_t evictable_size_;
-  size_t replacer_size_;        // what is replacer size ?
+  size_t replacer_size_;  // what is replacer size ?
   size_t k_;
   std::mutex latch_;
 };

@@ -31,13 +31,13 @@ enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
  * Both internal and leaf page are inherited from this page.
  *
  * It actually serves as a header part for each B+ tree page and
- * contains information shared by both leaf page and internal page.
+ * contains information shared by both leaf page and internal page.                     // 服务用于作为: header part of B+ tree page & internal page 和 leaf page 共享信息
  *
  * Header format (size in byte, 24 bytes in total):
  * ----------------------------------------------------------------------------
- * | PageType (4) | LSN (4) | CurrentSize (4) | MaxSize (4) |
+ * | PageType (4) | LSN (4) | CurrentSize (4) | MaxSize (4) |       ==> 16 byte
  * ----------------------------------------------------------------------------
- * | ParentPageId (4) | PageId(4) |
+ * | ParentPageId (4) | PageId(4) |                                 ==>  8 byte
  * ----------------------------------------------------------------------------
  */
 class BPlusTreePage {
@@ -64,12 +64,12 @@ class BPlusTreePage {
 
  private:
   // member variable, attributes that both internal and leaf page share
-  IndexPageType page_type_ __attribute__((__unused__));
-  lsn_t lsn_ __attribute__((__unused__));
-  int size_ __attribute__((__unused__));
+  IndexPageType page_type_ __attribute__((__unused__));             /** Internal Page or leaf page */
+  lsn_t lsn_ __attribute__((__unused__));                           /** 日志的序列号，用于版本控制？ */
+  int size_ __attribute__((__unused__));                            /** KV 对的数量 */
   int max_size_ __attribute__((__unused__));
-  page_id_t parent_page_id_ __attribute__((__unused__));
-  page_id_t page_id_ __attribute__((__unused__));
+  page_id_t parent_page_id_ __attribute__((__unused__));            /** Child pointer, aka page_id */
+  page_id_t page_id_ __attribute__((__unused__));                   /** Parent pointer, */
 };
 
 }  // namespace bustub

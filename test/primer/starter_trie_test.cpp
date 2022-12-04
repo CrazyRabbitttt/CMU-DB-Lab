@@ -40,7 +40,7 @@ std::vector<std::string> GenerateNRandomString(int n) {
 
   return rand_strs;
 }
-//TEST(StarterTest, TrieNodeInsertTest){
+// TEST(StarterTest, TrieNodeInsertTest){
 TEST(StarterTest, TrieNodeInsertTest) {
   // Test Insert
   //  When same key is inserted twice, insert should return nullptr
@@ -82,11 +82,18 @@ TEST(StarterTest, TrieNodeRemoveTest) {
 TEST(StarterTest, TrieInsertTest) {
   {
     Trie trie;
-    trie.Insert<std::string>("abc", "d");         // 1. insert string,
+    trie.Insert<std::string>("abc", "d");  // 1. insert string,
     bool success = true;
     auto val = trie.GetValue<std::string>("abc", &success);
     EXPECT_EQ(success, true);
     EXPECT_EQ(val, "d");
+    trie.Insert<std::string>("abcd", "lalalala");
+    val = trie.GetValue<std::string>("abcd", &success);
+    EXPECT_EQ(val, "lalalala");
+    trie.Insert<std::string>("ab", "testvalue");
+    val = trie.GetValue<std::string>("ab", &success);
+    EXPECT_EQ(val, "testvalue");
+    EXPECT_EQ(success, true);
   }
 
   // Insert empty string key should return false
@@ -108,7 +115,7 @@ TEST(StarterTest, TrieInsertTest) {
     EXPECT_EQ(success, false);
 
     auto val = trie.GetValue<int>("abc", &success);
-    EXPECT_EQ(success, true);                           // here is wrong,
+    EXPECT_EQ(success, true);  // here is wrong,
     EXPECT_EQ(val, 5);
   }
 
@@ -141,20 +148,26 @@ TEST(StarterTrieTest, RemoveTest) {
     EXPECT_EQ(success, true);
 
     success = trie.Remove("aaa");
-    EXPECT_EQ(success, true);                          // Remove succeed
+    EXPECT_EQ(success, true);  // Remove succeed
     trie.GetValue<int>("aaa", &success);
-    EXPECT_EQ(success, false);                        // here wrong, fixed..., the vector which is to store the node goes wrong
+    EXPECT_EQ(success, false);  // here wrong, fixed..., the vector which is to store the node goes wrong
 
     success = trie.Insert("aaa", 8);
     EXPECT_EQ(success, true);
-    EXPECT_EQ(trie.GetValue<int>("aaa", &success), 8);    //
+    EXPECT_EQ(trie.GetValue<int>("aaa", &success), 8);  //
     EXPECT_EQ(success, true);
 
     // Remove non-existant keys should return false
     success = trie.Remove("aaaa");
     EXPECT_EQ(success, false);
+
+    // add test cases
+    success = trie.Insert("aaabcd", 999);
+    EXPECT_EQ(success, true);
+    success = trie.Remove("aaabcd");
+    EXPECT_EQ(success, true);
     success = trie.Remove("aa");
-    EXPECT_EQ(success, true);                             // here wrong ?
+    EXPECT_EQ(success, true);  // here wrong ?
     success = trie.Remove("a");
     EXPECT_EQ(success, true);
     success = trie.Remove("aaa");

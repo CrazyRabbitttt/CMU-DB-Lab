@@ -67,7 +67,7 @@ class Page {
   inline void SetLSN(lsn_t lsn) { memcpy(GetData() + OFFSET_LSN, &lsn, sizeof(lsn_t)); }
 
  protected:
-  static_assert(sizeof(page_id_t) == 4);
+  static_assert(sizeof(page_id_t) == 4);  // 编译时期进行静态的断言, 意义是什么呢 ？
   static_assert(sizeof(lsn_t) == 4);
 
   static constexpr size_t SIZE_PAGE_HEADER = 8;
@@ -79,12 +79,13 @@ class Page {
   inline void ResetMemory() { memset(data_, OFFSET_PAGE_START, BUSTUB_PAGE_SIZE); }
 
   /** The actual data that is stored within a page. */
-  char data_[BUSTUB_PAGE_SIZE]{};
+  char data_[BUSTUB_PAGE_SIZE]{};  // 4M
   /** The ID of this page. */
   page_id_t page_id_ = INVALID_PAGE_ID;
   /** The pin count of this page. */
-  int pin_count_ = 0;
-  /** True if the page is dirty, i.e. it is different from its corresponding page on disk. */
+  int pin_count_ = 0; /** not allowed to free a Page that is pinned */
+  /** True if the page is dirty, i.e. it is different from its corresponding page on disk.
+   * 同磁盘中存储的数据是不同的，如果说需要更改 buffer_poll中的数据需要先落盘 */
   bool is_dirty_ = false;
   /** Page latch. */
   ReaderWriterLatch rwlatch_;

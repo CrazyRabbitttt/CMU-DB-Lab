@@ -22,7 +22,7 @@ TEST(ExtendibleHashTableTest, SampleTest) {
   table->Insert(7, "g");
   table->Insert(8, "h");
   table->Insert(9, "i");
-  EXPECT_EQ(2, table->GetLocalDepth(0));        // the global depth should increment
+  EXPECT_EQ(2, table->GetLocalDepth(0));  // the global depth should increment
   EXPECT_EQ(3, table->GetLocalDepth(1));
   EXPECT_EQ(2, table->GetLocalDepth(2));
   EXPECT_EQ(2, table->GetLocalDepth(3));

@@ -33,7 +33,7 @@ DiskManagerMemory::DiskManagerMemory(size_t pages) { memory_ = new char[pages * 
  * Write the contents of the specified page into disk file
  */
 void DiskManagerMemory::WritePage(page_id_t page_id, const char *page_data) {
-  size_t offset = static_cast<size_t>(page_id) * BUSTUB_PAGE_SIZE;
+  size_t offset = static_cast<size_t>(page_id) * BUSTUB_PAGE_SIZE;  // 根据 page_id 获得 buffer pool 中的 offset
   // set write cursor to offset
   num_writes_ += 1;
   memcpy(memory_ + offset, page_data, BUSTUB_PAGE_SIZE);

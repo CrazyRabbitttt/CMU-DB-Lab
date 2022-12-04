@@ -21,12 +21,12 @@
 
 namespace bustub {
 
-// NOLINTNEXTLINE
+// NOLINT NEXT LINE
 // Check whether pages containing terminal characters can be recovered
-TEST(BufferPoolManagerInstanceTest, DISABLED_BinaryDataTest) {
+TEST(BufferPoolManagerInstanceTest, BinaryDataTest) {
   const std::string db_name = "test.db";
-  const size_t buffer_pool_size = 10;
-  const size_t k = 5;
+  const size_t buffer_pool_size = 10;  // the num of pages in buffer pool
+  const size_t k = 5;                  // LRU-k's  ====> k
 
   std::random_device r;
   std::default_random_engine rng(r());
@@ -40,7 +40,7 @@ TEST(BufferPoolManagerInstanceTest, DISABLED_BinaryDataTest) {
 
   // Scenario: The buffer pool is empty. We should be able to create a new page.
   ASSERT_NE(nullptr, page0);
-  EXPECT_EQ(0, page_id_temp);
+  EXPECT_EQ(0, page_id_temp);  // Here wrong .....
 
   char random_binary_data[BUSTUB_PAGE_SIZE];
   // Generate random binary data
@@ -68,10 +68,11 @@ TEST(BufferPoolManagerInstanceTest, DISABLED_BinaryDataTest) {
 
   // Scenario: After unpinning pages {0, 1, 2, 3, 4} we should be able to create 5 new pages
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(true, bpm->UnpinPage(i, true));
+    EXPECT_EQ(true, bpm->UnpinPage(i, true));  // UnPin the page, so it can be evicted
     bpm->FlushPage(i);
   }
-  for (int i = 0; i < 5; ++i) {
+
+  for (int i = 0; i < 5; ++i) { /** 下面会驱逐掉 frame[0] 对应的 Page */
     EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
     bpm->UnpinPage(page_id_temp, false);
   }
@@ -83,13 +84,12 @@ TEST(BufferPoolManagerInstanceTest, DISABLED_BinaryDataTest) {
   // Shutdown the disk manager and remove the temporary file we created.
   disk_manager->ShutDown();
   remove("test.db");
-
   delete bpm;
   delete disk_manager;
 }
 
 // NOLINTNEXTLINE
-TEST(BufferPoolManagerInstanceTest, DISABLED_SampleTest) {
+TEST(BufferPoolManagerInstanceTest, SampleTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t k = 5;

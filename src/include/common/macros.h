@@ -19,7 +19,6 @@ namespace bustub {
 
 #define BUSTUB_ASSERT(expr, message) assert((expr) && (message))
 
-#define THROWERROR(message) throw std::logic_error(message)
 
 #define UNIMPLEMENTED(message) throw std::logic_error(message)
 
